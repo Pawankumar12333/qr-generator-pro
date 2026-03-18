@@ -9,15 +9,14 @@ export default function DigitalGallery() {
   const [galleryId, setGalleryId] = useState("");
   const [selected, setSelected] = useState([]);
 
-  // ✅ Network IP auto-detect (Local and Production friendly)
-  const backendURL = `http://${window.location.hostname}:5000`;
+  // ✅ FIX: Seedha Render Backend ka URL use karein
+  const backendURL = "https://qr-backend-pawan.onrender.com";
 
+  // ✅ FIX: Image URL generate karne ka sahi tarika
   const getNetworkUrl = (url) => {
     if (!url) return "";
-    if (url.includes("localhost")) {
-      return url.replace("localhost", window.location.hostname);
-    }
-    return url.startsWith("http") ? url : `${backendURL}${url}`;
+    if (url.startsWith("http")) return url;
+    return `${backendURL}${url}`;
   };
 
   useEffect(() => {
@@ -34,10 +33,9 @@ export default function DigitalGallery() {
       setLoading(true);
       const response = await fetch(`${backendURL}/api/gallery/${id}`);
       
-      // ✅ Naya Logic: Agar backend se 404 aaye toh matlab QR expire ho gaya hai
       if (response.status === 404) {
         alert("⚠️ Yeh QR Code expire ho chuka hai (24 Hours Limit Over)");
-        window.location.href = "/"; // Wapas home par bhej do
+        window.location.href = "/";
         return;
       }
 
@@ -240,10 +238,10 @@ export default function DigitalGallery() {
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "15px" }}>
                   <h3 style={{ margin: 0 }}>Ready to Upload ({pendingFiles.length} photos)</h3>
                   <button 
-                      onClick={() => document.getElementById('mainFileInput').click()}
-                      style={{ padding: "8px 15px", background: "#008CBA", color: "white", border: "none", borderRadius: "5px", cursor: "pointer", fontSize: "14px" }}
+                    onClick={() => document.getElementById('mainFileInput').click()}
+                    style={{ padding: "8px 15px", background: "#008CBA", color: "white", border: "none", borderRadius: "5px", cursor: "pointer", fontSize: "14px" }}
                   >
-                      ➕ Add More
+                    ➕ Add More
                   </button>
               </div>
               
