@@ -1,0 +1,131 @@
+/* BODY */
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  min-height: 100vh;
+
+  display: flex;
+  flex-direction: column;   
+  justify-content: flex-start; 
+  align-items: center;       
+  background: white;
+}
+
+/* ROOT BACKGROUND */
+#root {
+  background-image: url("/pawn.jpg");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+
+  width: 100vw;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* APP CONTAINER */
+.app-container {
+  display: flex;
+  gap: 25px;              
+  justify-content: center;
+  align-items: flex-start;
+  flex-wrap: wrap;       
+  margin-top: 40px;       
+}
+
+/* EACH CARD (Generator + Scanner) */
+.app-container > div {
+  background: white;
+  padding: 20px;
+  border-radius: 16px;
+  width: 360px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+  margin-top: 0;          /* remove old 10vh */
+}
+
+/* BUTTONS */
+.btn {
+  color: violet;
+  background-color: rgb(214, 216, 232);
+  gap: 5px;
+  margin: 10px 0;
+}
+
+/* OTHER ELEMENTS */
+#gap {
+  display: flex;
+  gap: 10px;
+}
+
+select {
+  margin-right: 15px;
+}
+
+div.qr-card {
+  background-color: rgba(8, 22, 48, 0.6);
+}
+
+h2 {
+  color: white;
+}
+
+.abc {
+  background-color: white;
+  color: whitesmoke;
+}
+
+p {
+  color: white;
+}
+
+/* FOOTER */
+.footer {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  padding: 20px;
+
+  background-image: url("/pawn.jpg");  
+  background-repeat: no-repeat;       
+  background-size: cover;             
+  background-position: center;        
+}
+/* BIO CARD */
+.bio-card {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  background-color: rgba(8, 22, 48, 0.6);
+  backdrop-filter: blur(10px);
+  padding: 15px 20px;
+  border-radius: 12px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.15);
+}
+
+.bio-card img {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.bio-info h3 {
+  margin: 0;
+  color: white;
+}
+
+.bio-info p {
+  margin: 2px 0;
+  font-size: 14px;
+  color: white;
+}
+h4{
+  color: white;
+}
+
+div .dg-container{
+  background-color: rgba(8, 22, 48, 0.6);
+  color: white;
+}
