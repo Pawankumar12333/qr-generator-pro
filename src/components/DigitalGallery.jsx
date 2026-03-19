@@ -9,10 +9,10 @@ export default function DigitalGallery() {
   const [galleryId, setGalleryId] = useState("");
   const [selected, setSelected] = useState([]);
 
-  // ✅ FIX: Seedha Render Backend ka URL use karein
+  // ✅ Backend URL
   const backendURL = "https://qr-backend-pawan.onrender.com";
 
-  // ✅ FIX: Image URL generate karne ka sahi tarika
+  // ✅ Image URL Fix
   const getNetworkUrl = (url) => {
     if (!url) return "";
     if (url.startsWith("http")) return url;
@@ -50,10 +50,29 @@ export default function DigitalGallery() {
     }
   };
 
+  // ✅ QR Code Download Function
+  const downloadGalleryQR = () => {
+    const canvas = document.querySelector(".dg-qr-box canvas");
+    if (!canvas) {
+      alert("QR Code nahi mila!");
+      return;
+    }
+    const url = canvas.toDataURL("image/png");
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `Gallery_QR_${galleryId}.png`;
+    link.click();
+  };
+
+  // ✅ Copy Link Function
+  const copyGalleryLink = () => {
+    navigator.clipboard.writeText(galleryURL);
+    alert("Link copy ho gaya! Ab aap ise kahin bhi share kar sakte hain. ✅");
+  };
+
   const handleSelectFiles = (e, isDrop = false) => {
     e.preventDefault();
     const files = isDrop ? Array.from(e.dataTransfer.files) : Array.from(e.target.files);
-    
     if (!files.length) return;
 
     const newPreviews = files.map(file => ({
@@ -63,10 +82,7 @@ export default function DigitalGallery() {
     }));
 
     setPendingFiles(prev => [...prev, ...newPreviews]);
-    
-    if (!isDrop && e.target) {
-        e.target.value = ''; 
-    }
+    if (!isDrop && e.target) { e.target.value = ''; }
   };
 
   const removePendingFile = (id) => {
@@ -94,7 +110,6 @@ export default function DigitalGallery() {
       });
 
       const data = await response.json();
-
       if (response.ok) {
         setGalleryId(data.galleryId);
         setImages(data.images); 
@@ -106,7 +121,6 @@ export default function DigitalGallery() {
       console.error("Upload error:", err);
       alert("Server se connect nahi ho paaya.");
     }
-
     setLoading(false);
   };
 
@@ -195,35 +209,43 @@ export default function DigitalGallery() {
         ⏱️ Note: Photos will automatically delete after 24 hours.
       </p>
 
-      {/* ✅ SUCCESS MODE: QR Code */}
+      {/* ✅ QR Code Section with Download & Share */}
       {!viewMode && galleryId && (
-        <div style={{ textAlign: "center", marginBottom: "20px", padding: "15px", background: "#e8f5e9", borderRadius: "10px" }}>
-          <div className="dg-qr-box" style={{ background: "#fff", padding: "15px", display: "inline-block", borderRadius: "10px", boxShadow: "0 4px 8px rgba(0,0,0,0.1)" }}>
+        <div style={{ textAlign: "center", marginBottom: "20px", padding: "20px", background: "#f1f8e9", borderRadius: "15px", border: "1px solid #c5e1a5" }}>
+          <div className="dg-qr-box" style={{ background: "#fff", padding: "15px", display: "inline-block", borderRadius: "10px", boxShadow: "0 4px 12px rgba(0,0,0,0.1)" }}>
             <QRCodeCanvas value={galleryURL} size={200} />
-            <p style={{ marginTop: "10px", fontWeight: "bold" }}>Live QR Code</p>
+            <p style={{ marginTop: "10px", fontWeight: "bold", color: "#333" }}>Aapka Live QR Code</p>
           </div>
-          <br/>
-          <button onClick={clearAll} style={{ marginTop: "15px", padding: "8px 15px", background: "#f44336", color: "white", border: "none", borderRadius: "5px", cursor: "pointer" }}>
-            ➕ Create New Gallery
-          </button>
+          
+          <div style={{ marginTop: "15px", display: "flex", justifyContent: "center", gap: "10px", flexWrap: "wrap" }}>
+            <button onClick={downloadGalleryQR} style={{ padding: "10px 20px", background: "#4CAF50", color: "white", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "bold" }}>
+              ⬇️ Download QR
+            </button>
+            <button onClick={copyGalleryLink} style={{ padding: "10px 20px", background: "#2196F3", color: "white", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "bold" }}>
+              🔗 Copy Link
+            </button>
+            <button onClick={clearAll} style={{ padding: "10px 20px", background: "#ff5722", color: "white", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "bold" }}>
+              ➕ New Gallery
+            </button>
+          </div>
         </div>
       )}
 
-      {/* ✅ SELECTION AND PREVIEW MODE */}
+      {/* ✅ Selection Mode */}
       {!viewMode && (
         <>
           <div 
             style={{ 
-              border: "2px dashed #008CBA", padding: "20px", borderRadius: "10px", 
-              marginBottom: "15px", backgroundColor: "#f9f9f9", textAlign: "center",
-              cursor: "pointer"
+              border: "2px dashed #008CBA", padding: "30px", borderRadius: "15px", 
+              marginBottom: "20px", backgroundColor: "#fdfdfd", textAlign: "center",
+              cursor: "pointer", transition: "0.3s"
             }}
             onDragOver={(e) => e.preventDefault()}
             onDrop={(e) => handleSelectFiles(e, true)}
             onClick={() => document.getElementById('mainFileInput').click()} 
           >
-            <p style={{ fontSize: "16px", color: "gray", marginBottom: "10px", pointerEvents: "none" }}>
-              📂 <b>Photos ko yahan Drag & Drop karein</b> ya click karke select karein.
+            <p style={{ fontSize: "18px", color: "#555", fontWeight: "500" }}>
+              📸 Click here or Drag Photos to Upload
             </p>
             <input
               id="mainFileInput"
@@ -234,25 +256,25 @@ export default function DigitalGallery() {
           </div>
 
           {pendingFiles.length > 0 && (
-            <div style={{ padding: "20px", background: "#fff", borderRadius: "10px", boxShadow: "0 4px 8px rgba(0,0,0,0.1)", marginBottom: "20px" }}>
+            <div style={{ padding: "20px", background: "#fff", borderRadius: "12px", boxShadow: "0 4px 10px rgba(0,0,0,0.05)", marginBottom: "20px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "15px" }}>
-                  <h3 style={{ margin: 0 }}>Ready to Upload ({pendingFiles.length} photos)</h3>
+                  <h3 style={{ margin: 0 }}>Selected ({pendingFiles.length} photos)</h3>
                   <button 
                     onClick={() => document.getElementById('mainFileInput').click()}
-                    style={{ padding: "8px 15px", background: "#008CBA", color: "white", border: "none", borderRadius: "5px", cursor: "pointer", fontSize: "14px" }}
+                    style={{ padding: "6px 12px", background: "#eee", border: "1px solid #ddd", borderRadius: "5px", cursor: "pointer" }}
                   >
-                    ➕ Add More
+                    + Add More
                   </button>
               </div>
               
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(100px, 1fr))", gap: "10px", margin: "15px 0" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(90px, 1fr))", gap: "10px" }}>
                 {pendingFiles.map((item) => (
                   <div key={item.id} style={{ position: "relative" }}>
-                    <img src={item.previewUrl} alt="preview" style={{ width: "100%", height: "100px", objectFit: "cover", borderRadius: "8px" }} />
+                    <img src={item.previewUrl} alt="preview" style={{ width: "100%", height: "90px", objectFit: "cover", borderRadius: "8px" }} />
                     <button 
                       onClick={() => removePendingFile(item.id)}
-                      style={{ position: "absolute", top: "5px", right: "5px", background: "red", color: "white", border: "none", borderRadius: "50%", width: "25px", height: "25px", cursor: "pointer", display: "flex", justifyContent: "center", alignItems: "center" }}
-                    >X</button>
+                      style={{ position: "absolute", top: "-5px", right: "-5px", background: "#ff1744", color: "white", border: "none", borderRadius: "50%", width: "22px", height: "22px", cursor: "pointer", fontSize: "12px" }}
+                    >✕</button>
                   </div>
                 ))}
               </div>
@@ -260,46 +282,41 @@ export default function DigitalGallery() {
               <button 
                 onClick={handleGenerateOrAdd}
                 disabled={loading}
-                style={{ width: "100%", padding: "15px", background: loading ? "gray" : "#4CAF50", color: "white", fontSize: "18px", fontWeight: "bold", border: "none", borderRadius: "8px", cursor: "pointer", marginTop: "10px" }}
+                style={{ width: "100%", padding: "15px", background: loading ? "#ccc" : "#4CAF50", color: "white", fontSize: "18px", fontWeight: "bold", border: "none", borderRadius: "10px", cursor: "pointer", marginTop: "20px" }}
               >
-                {loading ? "Processing... ⏳" : (galleryId ? "➕ Add Photos to Live QR" : "🚀 Generate QR Code")}
+                {loading ? "Uploading... ⏳" : (galleryId ? "Update Live Gallery" : "🚀 Create QR Gallery")}
               </button>
             </div>
           )}
         </>
       )}
 
-      {/* ✅ ACTIONS */}
+      {/* ✅ Gallery Actions */}
       {images.length > 0 && (
-        <div className="dg-actions" style={{ marginTop: "20px", marginBottom: "20px", display: "flex", flexWrap: "wrap", gap: "10px", justifyContent: "center" }}>
-          <button onClick={downloadSelected} style={{ padding: "10px", background: "#4CAF50", color: "white", border: "none", borderRadius: "5px", cursor: "pointer" }}>
-            ⬇️ Download Selected ({selected.length})
+        <div className="dg-actions" style={{ marginBottom: "20px", display: "flex", flexWrap: "wrap", gap: "10px", justifyContent: "center" }}>
+          <button onClick={downloadSelected} style={{ padding: "10px 15px", background: "#43a047", color: "white", border: "none", borderRadius: "6px", cursor: "pointer" }}>
+            Download Selected ({selected.length})
           </button>
-          <button onClick={downloadAll} style={{ padding: "10px", background: "#008CBA", color: "white", border: "none", borderRadius: "5px", cursor: "pointer" }}>
-            ⬇️ Download All
+          <button onClick={downloadAll} style={{ padding: "10px 15px", background: "#1e88e5", color: "white", border: "none", borderRadius: "6px", cursor: "pointer" }}>
+            Download All Images
           </button>
           {!viewMode && selected.length > 0 && (
-            <button onClick={deleteSelected} style={{ padding: "10px", background: "red", color: "white", border: "none", borderRadius: "5px", cursor: "pointer" }}>
-              🗑️ Delete Selected ({selected.length})
+            <button onClick={deleteSelected} style={{ padding: "10px 15px", background: "#e53935", color: "white", border: "none", borderRadius: "6px", cursor: "pointer" }}>
+              Delete Selected
             </button>
           )}
         </div>
       )}
 
-      {/* ✅ GRID */}
-      <div className="dg-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "15px", marginTop: "20px" }}>
+      {/* ✅ Image Grid */}
+      <div className="dg-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "15px" }}>
         {images.map((img) => (
-          <div key={img.id} className="dg-card" style={{ position: "relative", textAlign: "center" }}>
+          <div key={img.id} className="dg-card" style={{ position: "relative", borderRadius: "10px", overflow: "hidden", border: selected.includes(img.id) ? "4px solid #4CAF50" : "1px solid #eee" }}>
             <img 
-              src={getNetworkUrl(img.url)} alt="Gallery item" onClick={() => toggleSelect(img.id)}
-              style={{ width: "100%", borderRadius: "8px", cursor: "pointer", border: selected.includes(img.id) ? "4px solid #4CAF50" : "4px solid transparent", opacity: selected.includes(img.id) ? 0.8 : 1, transition: "0.2s" }} 
+              src={getNetworkUrl(img.url)} alt="Gallery" onClick={() => toggleSelect(img.id)}
+              style={{ width: "100%", height: "200px", objectFit: "cover", cursor: "pointer" }} 
             />
-            <input type="checkbox" checked={selected.includes(img.id)} readOnly style={{ position: "absolute", top: "10px", left: "10px", transform: "scale(1.5)", pointerEvents: "none" }} />
-            {!viewMode && (
-              <button onClick={() => deleteImage(img.id)} className="dg-delete" style={{ marginTop: "10px", background: "red", color: "white", border: "none", padding: "5px 15px", cursor: "pointer", borderRadius: "5px" }}>
-                Delete
-              </button>
-            )}
+            <input type="checkbox" checked={selected.includes(img.id)} readOnly style={{ position: "absolute", top: "10px", left: "10px", width: "20px", height: "20px" }} />
           </div>
         ))}
       </div>
