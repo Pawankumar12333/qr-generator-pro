@@ -67,7 +67,7 @@ cron.schedule('0 * * * *', async () => {
 // ROUTES
 // ==========================================
 
-app.get('/', (req, res) => res.send('Backend Timer Server Mast Chal Raha Hai!'));
+app.get('/', (req, res) => res.send('Backend Timer Server is ongoing  best !'));
 
 // Images Upload Route (Live Add Feature ke saath)
 app.post('/api/upload-gallery', upload.array('images', 20), async (req, res) => {

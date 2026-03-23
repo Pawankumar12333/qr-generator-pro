@@ -34,7 +34,7 @@ export default function DigitalGallery() {
       const response = await fetch(`${backendURL}/api/gallery/${id}`);
       
       if (response.status === 404) {
-        alert("⚠️ Yeh QR Code expire ho chuka hai (24 Hours Limit Over)");
+        alert("⚠️ Your  QR Code expired Over  (24 Hours Limit Over)");
         window.location.href = "/";
         return;
       }
@@ -54,7 +54,7 @@ export default function DigitalGallery() {
   const downloadGalleryQR = () => {
     const canvas = document.querySelector(".dg-qr-box canvas");
     if (!canvas) {
-      alert("QR Code nahi mila!");
+      alert("QR Code Not Founded!");
       return;
     }
     const url = canvas.toDataURL("image/png");
@@ -67,7 +67,7 @@ export default function DigitalGallery() {
   // ✅ Copy Link Function
   const copyGalleryLink = () => {
     navigator.clipboard.writeText(galleryURL);
-    alert("Link copy ho gaya! Ab aap ise kahin bhi share kar sakte hain. ✅");
+    alert("Link copied ! You can share Anybody. ✅");
   };
 
   const handleSelectFiles = (e, isDrop = false) => {
@@ -91,7 +91,7 @@ export default function DigitalGallery() {
 
   const handleGenerateOrAdd = async () => {
     if (!pendingFiles.length) {
-      alert("Pehle kuch photos select karein!");
+      alert(" Please select Some photo !");
       return;
     }
 
@@ -119,7 +119,7 @@ export default function DigitalGallery() {
       }
     } catch (err) {
       console.error("Upload error:", err);
-      alert("Server se connect nahi ho paaya.");
+      alert("Server Faield Please Cheack .");
     }
     setLoading(false);
   };
@@ -140,7 +140,7 @@ export default function DigitalGallery() {
 
   const deleteSelected = async () => {
     if (selected.length === 0) return;
-    if (!window.confirm("Kya aap sach mein selected photos delete karna chahte hain?")) return;
+    if (!window.confirm("Sure you want to delete ?")) return;
 
     setLoading(true);
     for (let imageId of selected) {
