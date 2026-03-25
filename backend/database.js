@@ -1,22 +1,21 @@
+// database.js
 require('dotenv').config();
-const mongoose = require('mongoose');
+const { createClient } = require('@supabase/supabase-js');
+
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SECRET_KEY
+);
 
 const connectDB = async () => {
-    try {
-        const mongoURI = process.env.MONGO_URI;
-
-        if (!mongoURI) {
-            throw new Error('MONGO_URI not found in .env file');
-        }
-
-        // Clean version: No extra options needed for modern Mongoose
-        await mongoose.connect(mongoURI);
-
-        console.log('✅ MongoDB Atlas Cloud connected successfully!');
-    } catch (error) {
-        console.error('❌ MongoDB Connection Error:', error.message);
-        process.exit(1);
-    }
+  try {
+    const { error } = await supabase.from('galleries').select('id').limit(1);
+    if (error && error.code !== 'PGRST116') throw error;
+    console.log('✅ Supabase connected successfully!');
+  } catch (error) {
+    console.error('❌ Supabase Connection Error:', error.message);
+    process.exit(1);
+  }
 };
 
-module.exports = connectDB;
+module.exports = { supabase, connectDB };
