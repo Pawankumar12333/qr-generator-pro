@@ -10,7 +10,7 @@ export default function DigitalGallery() {
   const [selected, setSelected] = useState([]);
 
   // ✅ Backend URL
-  const backendURL = "https://qr-backend-pawan.onrender.com";
+  const backendURL = "https://qr-gallery-backend.onrender.com";
 
   // ✅ Image URL Fix
   const getNetworkUrl = (url) => {
