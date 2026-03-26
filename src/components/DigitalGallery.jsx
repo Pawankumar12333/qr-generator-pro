@@ -34,14 +34,14 @@ export default function DigitalGallery() {
       const response = await fetch(`${backendURL}/api/gallery/${id}`);
       
       if (response.status === 404) {
-        alert("⚠️ Your  QR Code expired Over  (24 Hours Limit Over)");
+        alert("⚠️ Your QR Code expired (24 Hours Limit Over)");
         window.location.href = "/";
         return;
       }
 
       const data = await response.json();
       if (response.ok) {
-        setImages(data.images);
+        setImages(data.images || []);
       }
       setLoading(false);
     } catch (err) {
@@ -54,7 +54,7 @@ export default function DigitalGallery() {
   const downloadGalleryQR = () => {
     const canvas = document.querySelector(".dg-qr-box canvas");
     if (!canvas) {
-      alert("QR Code Not Founded!");
+      alert("QR Code Not Found!");
       return;
     }
     const url = canvas.toDataURL("image/png");
@@ -67,7 +67,7 @@ export default function DigitalGallery() {
   // ✅ Copy Link Function
   const copyGalleryLink = () => {
     navigator.clipboard.writeText(galleryURL);
-    alert("Link copied ! You can share Anybody. ✅");
+    alert("Link copied! You can share with anybody. ✅");
   };
 
   const handleSelectFiles = (e, isDrop = false) => {
@@ -91,7 +91,7 @@ export default function DigitalGallery() {
 
   const handleGenerateOrAdd = async () => {
     if (!pendingFiles.length) {
-      alert(" Please select Some photo !");
+      alert("Please select some photos!");
       return;
     }
 
@@ -110,16 +110,22 @@ export default function DigitalGallery() {
       });
 
       const data = await response.json();
+      console.log("Upload response:", data); // Debug log
+
       if (response.ok) {
-        setGalleryId(data.galleryId);
-        setImages(data.images); 
+        // ✅ Fix: Supabase returns gallery_id
+        const id = data.gallery_id || data.galleryId;
+        const imgs = data.images || [];
+        
+        setGalleryId(id);
+        setImages(imgs); 
         setPendingFiles([]); 
       } else {
-        alert("Upload fail: " + data.message);
+        alert("Upload failed: " + (data.message || data.error));
       }
     } catch (err) {
       console.error("Upload error:", err);
-      alert("Server Faield Please Cheack .");
+      alert("Server failed. Please check.");
     }
     setLoading(false);
   };
@@ -140,7 +146,7 @@ export default function DigitalGallery() {
 
   const deleteSelected = async () => {
     if (selected.length === 0) return;
-    if (!window.confirm("Sure you want to delete ?")) return;
+    if (!window.confirm("Sure you want to delete?")) return;
 
     setLoading(true);
     for (let imageId of selected) {
@@ -199,7 +205,7 @@ export default function DigitalGallery() {
     });
   };
 
-  const galleryURL = galleryId && images.length > 0 ? `${window.location.origin}/view/${galleryId}` : "";
+  const galleryURL = galleryId ? `${window.location.origin}/view/${galleryId}` : "";
   const viewMode = window.location.pathname.includes("/view/");
 
   return (
@@ -209,7 +215,7 @@ export default function DigitalGallery() {
         ⏱️ Note: Photos will automatically delete after 24 hours.
       </p>
 
-      {/* ✅ QR Code Section with Download & Share */}
+      {/* ✅ QR Code Section */}
       {!viewMode && galleryId && (
         <div style={{ textAlign: "center", marginBottom: "20px", padding: "20px", background: "#f1f8e9", borderRadius: "15px", border: "1px solid #c5e1a5" }}>
           <div className="dg-qr-box" style={{ background: "#fff", padding: "15px", display: "inline-block", borderRadius: "10px", boxShadow: "0 4px 12px rgba(0,0,0,0.1)" }}>
@@ -231,7 +237,7 @@ export default function DigitalGallery() {
         </div>
       )}
 
-      {/* ✅ Selection Mode */}
+      {/* ✅ Upload Section */}
       {!viewMode && (
         <>
           <div 
@@ -258,13 +264,13 @@ export default function DigitalGallery() {
           {pendingFiles.length > 0 && (
             <div style={{ padding: "20px", background: "#fff", borderRadius: "12px", boxShadow: "0 4px 10px rgba(0,0,0,0.05)", marginBottom: "20px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "15px" }}>
-                  <h3 style={{ margin: 0 }}>Selected ({pendingFiles.length} photos)</h3>
-                  <button 
-                    onClick={() => document.getElementById('mainFileInput').click()}
-                    style={{ padding: "6px 12px", background: "#eee", border: "1px solid #ddd", borderRadius: "5px", cursor: "pointer" }}
-                  >
-                    + Add More
-                  </button>
+                <h3 style={{ margin: 0 }}>Selected ({pendingFiles.length} photos)</h3>
+                <button 
+                  onClick={() => document.getElementById('mainFileInput').click()}
+                  style={{ padding: "6px 12px", background: "#eee", border: "1px solid #ddd", borderRadius: "5px", cursor: "pointer" }}
+                >
+                  + Add More
+                </button>
               </div>
               
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(90px, 1fr))", gap: "10px" }}>
