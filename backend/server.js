@@ -9,6 +9,9 @@ const { supabase, connectDB } = require('./database');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// ==========================================
+// MIDDLEWARE
+// ==========================================
 app.use(cors());
 app.use(express.json());
 
@@ -16,10 +19,12 @@ connectDB();
 
 const upload = multer({ storage: multer.memoryStorage() });
 
-// Chunks ko temporary store karne ke liye object (In-memory)
-// Note: Production mein agar server restart hoga to progress lose ho jayegi
+// Chunks storage in memory
 const tempChunks = {}; 
 
+// ==========================================
+// HELPER: Upload to Supabase
+// ==========================================
 const uploadToStorage = async (fileBuffer, originalName, mimetype, folder = 'galleries') => {
   const filename = `${folder}/${uuidv4()}_${originalName}`;
 
@@ -40,8 +45,34 @@ const uploadToStorage = async (fileBuffer, originalName, mimetype, folder = 'gal
 };
 
 // ==========================================
-// 🚀 NEW ROUTE: CHUNK UPLOAD (For Pause/Resume)
+// 🕒 AUTO-DELETE LOGIC (Same as before)
 // ==========================================
+cron.schedule('0 * * * *', async () => {
+  console.log('🔍 Checking for expired data...');
+  const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  try {
+    const { data: expiredGalleries } = await supabase.from('galleries').select('*').lt('created_at', twentyFourHoursAgo);
+    for (const gallery of expiredGalleries || []) {
+      const paths = (gallery.images || []).map((img) => img.path);
+      if (paths.length > 0) await supabase.storage.from('gallery-images').remove(paths);
+      await supabase.from('galleries').delete().eq('gallery_id', gallery.gallery_id);
+    }
+    const { data: expiredFiles } = await supabase.from('files').select('*').lt('created_at', twentyFourHoursAgo);
+    for (const file of expiredFiles || []) {
+      await supabase.storage.from('gallery-images').remove([file.path]);
+      await supabase.from('files').delete().eq('id', file.id);
+    }
+  } catch (error) { console.error('❌ Cron Job Error:', error); }
+});
+
+// ==========================================
+// ROUTES
+// ==========================================
+
+// ✅ Fix "Cannot GET /"
+app.get('/', (req, res) => res.send('🚀 Smart File QR Backend is Active!'));
+
+// ── NEW: Chunk Upload (Pause/Resume support) ──
 app.post('/api/upload-chunk', upload.single('chunk'), async (req, res) => {
   try {
     const { chunkIndex, totalChunks, fileName } = req.body;
@@ -49,58 +80,57 @@ app.post('/api/upload-chunk', upload.single('chunk'), async (req, res) => {
 
     if (!chunkFile) return res.status(400).json({ error: 'No chunk received' });
 
-    // Chunk ko memory mein store karein
-    if (!tempChunks[fileName]) {
-      tempChunks[fileName] = [];
-    }
-    
+    if (!tempChunks[fileName]) tempChunks[fileName] = [];
     tempChunks[fileName][chunkIndex] = chunkFile.buffer;
 
-    // Check karein agar saare chunks mil gaye hain
     const receivedChunks = tempChunks[fileName].filter(Boolean).length;
     
     if (receivedChunks === parseInt(totalChunks)) {
-      console.log(`✅ All chunks received for ${fileName}. Merging...`);
-      
-      // Saare buffers ko ek saath merge karein
       const finalBuffer = Buffer.concat(tempChunks[fileName]);
-      
-      // Supabase Storage par upload karein
       const uploaded = await uploadToStorage(finalBuffer, fileName, chunkFile.mimetype, 'files');
 
-      // Database mein save karein
-      const { data, error } = await supabase
-        .from('files')
-        .insert([{
-          id: uploaded.id,
-          name: fileName,
-          url: uploaded.url,
-          path: uploaded.path,
-          size: finalBuffer.length,
-          mimetype: chunkFile.mimetype,
-        }])
-        .select()
-        .single();
+      const { data, error } = await supabase.from('files').insert([{
+        id: uploaded.id,
+        name: fileName,
+        url: uploaded.url,
+        path: uploaded.path,
+        size: finalBuffer.length,
+        mimetype: chunkFile.mimetype,
+      }]).select().single();
 
-      // Cleanup memory
       delete tempChunks[fileName];
-
       if (error) throw error;
       return res.status(201).json(data);
     } else {
-      // Agle chunk ke liye green signal dein
       return res.status(200).json({ message: `Chunk ${chunkIndex} uploaded` });
     }
   } catch (error) {
-    console.error('❌ Chunk Upload Error:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
-// ==========================================
-// Baki Routes (Gallery, Auto-Delete) Same Rahenge
-// ==========================================
+// ── Standard Gallery Upload ──
+app.post('/api/upload-gallery', upload.array('images', 20), async (req, res) => {
+  try {
+    const uploadedImages = await Promise.all(req.files.map(f => uploadToStorage(f.buffer, f.originalname, f.mimetype, 'galleries')));
+    const newGalleryId = uuidv4();
+    const { data, error } = await supabase.from('galleries').insert([{ gallery_id: newGalleryId, images: uploadedImages }]).select().single();
+    if (error) throw error;
+    res.status(201).json(data);
+  } catch (error) { res.status(500).json({ error: error.message }); }
+});
 
-// ... (Purana Code: Cron Job, /api/upload-gallery, etc. yahan paste karein)
+// ── Fetch Gallery & File ──
+app.get('/api/gallery/:id', async (req, res) => {
+  const { data, error } = await supabase.from('galleries').select('*').eq('gallery_id', req.params.id).single();
+  if (error || !data) return res.status(404).json({ message: 'Not found' });
+  res.status(200).json(data);
+});
+
+app.get('/api/file/:id', async (req, res) => {
+  const { data, error } = await supabase.from('files').select('*').eq('id', req.params.id).single();
+  if (error || !data) return res.status(404).json({ message: 'Not found' });
+  res.status(200).json(data);
+});
 
 app.listen(PORT, () => console.log(`🚀 Server running at: http://localhost:${PORT}`));
