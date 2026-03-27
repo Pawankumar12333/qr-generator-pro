@@ -1,5 +1,5 @@
 // server.js
-require('dotenv').config(); // MUST BE AT THE TOP
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
@@ -16,17 +16,16 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
-// Connect to Supabase
 connectDB();
 
-// Multer — memory storage (files go to Supabase Storage)
+// Multer — memory storage
 const upload = multer({ storage: multer.memoryStorage() });
 
 // ==========================================
 // HELPER: Upload file to Supabase Storage
 // ==========================================
-const uploadToStorage = async (file) => {
-  const filename = `galleries/${uuidv4()}_${file.originalname}`;
+const uploadToStorage = async (file, folder = 'galleries') => {
+  const filename = `${folder}/${uuidv4()}_${file.originalname}`;
 
   const { error } = await supabase.storage
     .from('gallery-images')
@@ -48,28 +47,35 @@ const uploadToStorage = async (file) => {
 // 🕒 AUTO-DELETE LOGIC (Every 1 Hour)
 // ==========================================
 cron.schedule('0 * * * *', async () => {
-  console.log('🔍 Checking for expired galleries (24hrs limit)...');
+  console.log('🔍 Checking for expired data (24hrs limit)...');
   const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
   try {
-    // Find expired galleries
-    const { data: expiredGalleries, error } = await supabase
+    // Delete expired galleries
+    const { data: expiredGalleries } = await supabase
       .from('galleries')
       .select('*')
       .lt('created_at', twentyFourHoursAgo);
 
-    if (error) throw error;
-
-    for (const gallery of expiredGalleries) {
-      // Delete images from Supabase Storage
+    for (const gallery of expiredGalleries || []) {
       const paths = (gallery.images || []).map((img) => img.path);
       if (paths.length > 0) {
         await supabase.storage.from('gallery-images').remove(paths);
       }
-
-      // Delete gallery row from DB
       await supabase.from('galleries').delete().eq('gallery_id', gallery.gallery_id);
-      console.log(`🗑️ Deleted Expired Gallery: ${gallery.gallery_id}`);
+      console.log(`🗑️ Deleted Gallery: ${gallery.gallery_id}`);
+    }
+
+    // Delete expired files
+    const { data: expiredFiles } = await supabase
+      .from('files')
+      .select('*')
+      .lt('created_at', twentyFourHoursAgo);
+
+    for (const file of expiredFiles || []) {
+      await supabase.storage.from('gallery-images').remove([file.path]);
+      await supabase.from('files').delete().eq('id', file.id);
+      console.log(`🗑️ Deleted File: ${file.name}`);
     }
   } catch (error) {
     console.error('❌ Cron Job Error:', error);
@@ -81,28 +87,22 @@ cron.schedule('0 * * * *', async () => {
 // ==========================================
 app.get('/', (req, res) => res.send('⚡ Supabase QR Gallery Server is Active!'));
 
-// ── Upload Route ──────────────────────────
+// ── Image Gallery Upload ──────────────────────────
 app.post('/api/upload-gallery', upload.array('images', 20), async (req, res) => {
   try {
     const { galleryId } = req.body;
-
-    // Upload all files to Supabase Storage
-    const uploadedImages = await Promise.all(req.files.map(uploadToStorage));
+    const uploadedImages = await Promise.all(req.files.map(f => uploadToStorage(f, 'galleries')));
 
     if (galleryId) {
-      // Fetch existing gallery
       const { data: gallery, error } = await supabase
         .from('galleries')
         .select('*')
         .eq('gallery_id', galleryId)
         .single();
 
-      if (error || !gallery) {
-        return res.status(404).json({ message: 'Gallery not found' });
-      }
+      if (error || !gallery) return res.status(404).json({ message: 'Gallery not found' });
 
       const updatedImages = [...(gallery.images || []), ...uploadedImages];
-
       const { data: updated, error: updateError } = await supabase
         .from('galleries')
         .update({ images: updatedImages })
@@ -113,9 +113,7 @@ app.post('/api/upload-gallery', upload.array('images', 20), async (req, res) => 
       if (updateError) throw updateError;
       return res.status(200).json(updated);
     } else {
-      // Create new gallery
       const newGalleryId = uuidv4();
-
       const { data: newGallery, error: insertError } = await supabase
         .from('galleries')
         .insert([{ gallery_id: newGalleryId, images: uploadedImages }])
@@ -140,11 +138,54 @@ app.get('/api/gallery/:id', async (req, res) => {
       .eq('gallery_id', req.params.id)
       .single();
 
-    if (error || !gallery) {
-      return res.status(404).json({ message: 'Expired or not found' });
-    }
-
+    if (error || !gallery) return res.status(404).json({ message: 'Expired or not found' });
     res.status(200).json(gallery);
+  } catch (error) {
+    res.status(500).json({ error: 'Fetch error' });
+  }
+});
+
+// ── Single File / ZIP Upload ──────────────
+app.post('/api/upload-file', upload.single('file'), async (req, res) => {
+  try {
+    const file = req.file;
+    if (!file) return res.status(400).json({ error: 'No file uploaded' });
+
+    const uploaded = await uploadToStorage(file, 'files');
+
+    // Save to files table in Supabase
+    const { data, error } = await supabase
+      .from('files')
+      .insert([{
+        id: uploaded.id,
+        name: file.originalname,
+        url: uploaded.url,
+        path: uploaded.path,
+        size: file.size,
+        mimetype: file.mimetype,
+      }])
+      .select()
+      .single();
+
+    if (error) throw error;
+    return res.status(201).json(data);
+  } catch (error) {
+    console.error('❌ File Upload Error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ── Fetch File ────────────────────────────
+app.get('/api/file/:id', async (req, res) => {
+  try {
+    const { data: file, error } = await supabase
+      .from('files')
+      .select('*')
+      .eq('id', req.params.id)
+      .single();
+
+    if (error || !file) return res.status(404).json({ message: 'Expired or not found' });
+    res.status(200).json(file);
   } catch (error) {
     res.status(500).json({ error: 'Fetch error' });
   }

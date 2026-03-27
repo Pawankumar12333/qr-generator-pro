@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import QRGenerator from './components/QRGenerator';
 import QRScanner from './components/QRExtractor';
 import DigitalGallery from './components/DigitalGallery';
+import SmartFile from './components/SmartFile';
 import './App.css';
 
 function App() {
@@ -68,6 +69,7 @@ function App() {
           <QRGenerator />
           <QRScanner />
           <DigitalGallery />
+          <SmartFile />
         </div>
 
         {/* --- FOOTER --- */}
