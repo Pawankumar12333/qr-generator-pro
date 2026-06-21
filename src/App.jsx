@@ -15,7 +15,7 @@ function App() {
     clearTimeout(timeoutRef.current);
     timeoutRef.current = setTimeout(() => {
       setIsOpen(false);
-    }, 10000); 
+    }, 100000000000000000); 
   };
 
   const toggleDoor = () => {
